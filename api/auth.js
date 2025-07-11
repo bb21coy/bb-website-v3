@@ -31,6 +31,10 @@ const checkAuthorization = (tokenType, res, allowedType = ["Admin", "Officer", "
 }
 
 export default async function handler(req, res) {
+    if (req.method === 'OPTIONS') {
+        console.log("hi", req.headers)
+        return res.status(200).end();
+    }
     console.log("hi", req.headers)
     try {
         const route = req.headers['x-route']
