@@ -1,20 +1,27 @@
-export default function handler(req, res) {
-    const allowedOrigins = ["http://localhost:3000/", "http://127.0.0.1:3000/"];
-    const origin = req.headers.origin;
+export const config = {
+  runtime: 'edge', // ✅ tell Vercel to run this as Edge Function
+};
 
-    if (allowedOrigins.includes(origin)) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-    }
+export default async function handler(req) {
+  const origin = req.headers.get('origin');
+  const allowedOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+  const headers = new Headers({
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  });
 
-    if (req.method === "OPTIONS") {
-        console.log("preflight");
-        return res.status(200).end(); // preflight success
-    }
+  if (allowedOrigins.includes(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+  }
 
-    // Your actual response
-    res.status(200).json({ message: "Hello from /api/auth" });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers });
+  }
+
+  return new Response(JSON.stringify({ message: 'CORS passed via Edge Function' }), {
+    status: 200,
+    headers,
+  });
 }
