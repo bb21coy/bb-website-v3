@@ -6,21 +6,6 @@ import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 dotenv.config({ quiet: true });
 
-export const config = {
-    runtime: 'edge',
-};
-
-const jsonResponse = (body, status = 200, origin) => {
-    const headers = new Headers({
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': origin || '',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Credentials': 'true',
-    });
-    return new Response(JSON.stringify(body), { status, headers });
-};
-
 const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
     try {
         if (!authorizationHeader) throw new Error('Missing authorization header');
@@ -47,8 +32,6 @@ const checkAuthorization = (tokenType, res, allowedType = ["Admin", "Officer", "
 
 export default async function handler(req, res) {
     try {
-        const origin = req.headers.get('origin');
-        const url = new URL(req.url);
         const route = req.headers['x-route']
         const authorization = req.headers['authorization'];
         const method = req.method;
@@ -56,23 +39,38 @@ export default async function handler(req, res) {
         const routeKey = `${method.toUpperCase()} ${route}`;
         await connectToDatabase();
 
+        const origin = req.headers.origin;
+        console.log(origin)
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+        if (req.method === 'OPTIONS') {
+            return res.status(200).end();
+        }
+
         switch (routeKey) {
             case 'POST /login':
                 var username = req.body?.username;
                 var password = req.body?.password;
 
-                if (!username || !password) return jsonResponse({ message: 'Missing username or password' }, 401, origin);
+                if (!username || !password) return res.status(401).json({ message: 'Missing username or password' });
 
                 var users = await User.find({ name: username });
-                if (!users[0]) return jsonResponse({ message: 'Invalid username or password' }, 401, origin);
-
+                if (users.length === 0) return res.status(401).json({ message: 'Invalid username or password' });
                 var match = await bcrypt.compare(password, users[0].password);
-                if (!match) return jsonResponse({ message: 'Invalid username or password' }, 401, origin);
 
-                const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
-                return jsonResponse({ token }, 200, origin);
+                if (match) {
+                    var token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
+                    res.headers = headers
+                    return res.status(200).json({ token });
+                } else {
+                    return res.status(401).json({ message: 'Invalid username or password' });
+                }
             case 'GET /get_account':
                 var id = url.searchParams.get('id');
+
                 if (!id) return res.status(400).json({ message: 'Missing ID' });
 
                 var user = await User.findById(id).select('-password');
