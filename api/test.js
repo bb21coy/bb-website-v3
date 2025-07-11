@@ -1,5 +1,5 @@
 export default function handler(req, res) {
-    const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+    const allowedOrigins = ["http://localhost:3000/", "http://127.0.0.1:3000/"];
     const origin = req.headers.origin;
 
     if (allowedOrigins.includes(origin)) {
