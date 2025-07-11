@@ -31,6 +31,10 @@ const checkAuthorization = (tokenType, res, allowedType = ["Admin", "Officer", "
 }
 
 export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') {
         console.log("hi", req.headers)
         return res.status(200).end();
@@ -43,17 +47,6 @@ export default async function handler(req, res) {
         if (!route) return res.status(401).json({ message: 'Missing route in headers' });
         const routeKey = `${method.toUpperCase()} ${route}`;
         await connectToDatabase();
-
-        const origin = req.headers.origin;
-        console.log(origin, req.headers)
-        res.setHeader('Access-Control-Allow-Origin', origin);
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-        if (req.method === 'OPTIONS') {
-            return res.status(200).end();
-        }
 
         switch (routeKey) {
             case 'POST /login':
