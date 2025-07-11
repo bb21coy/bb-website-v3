@@ -1,5 +1,5 @@
 import jwt, { decode } from 'jsonwebtoken';
-import connectToDatabase from '../mongoose.js'; 
+import connectToDatabase from '../mongoose.js';
 import User from '../models/users.js';
 import Token from '../models/token.js';
 import bcrypt from 'bcrypt';
@@ -31,10 +31,12 @@ const checkAuthorization = (tokenType, res, allowedType = ["Admin", "Officer", "
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', true);
+    const headers = {
+        "Access-Control-Allow-Origin": "http://127.0.0.1:3000",
+        "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+        "Access-Control-Allow-Credentials": "true",
+    };
 
     if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -45,7 +47,7 @@ export default async function handler(req, res) {
         if (!route) return res.status(401).json({ message: 'Missing route in headers' });
         const routeKey = `${method.toUpperCase()} ${route}`;
         await connectToDatabase();
-        
+
         switch (routeKey) {
             case 'POST /login':
                 var username = req.body?.username;
@@ -55,9 +57,10 @@ export default async function handler(req, res) {
 
                 var users = await User.find({ name: username });
                 var match = await bcrypt.compare(password, users[0].password);
-                    
+
                 if (match) {
                     var token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
+                    res.headers = headers
                     return res.status(200).json({ token });
                 } else {
                     return res.status(401).json({ message: 'Invalid username or password' });
@@ -73,7 +76,7 @@ export default async function handler(req, res) {
             case 'GET /get_own_account':
                 var decoded = await decodeJWT(authorization, res);
                 if (!decoded) return;
-                
+
                 var userId = decoded.id;
                 var user = await User.findById(userId).select('-password');
                 if (!user) return res.status(404).json({ message: 'User not found' });
