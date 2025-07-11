@@ -31,6 +31,7 @@ const checkAuthorization = (tokenType, res, allowedType = ["Admin", "Officer", "
 }
 
 export default async function handler(req, res) {
+    console.log("hi", req.headers)
     try {
         const route = req.headers['x-route']
         const authorization = req.headers['authorization'];
@@ -63,7 +64,6 @@ export default async function handler(req, res) {
 
                 if (match) {
                     var token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
-                    res.headers = headers
                     return res.status(200).json({ token });
                 } else {
                     return res.status(401).json({ message: 'Invalid username or password' });
