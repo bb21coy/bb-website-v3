@@ -33,6 +33,7 @@ export default async function handler(req, res) {
             }
         case 'GET /get_account':
             const id = req.query?.id;
+            console.log(req.query);
             if (!id) return res.status(400).json({ message: 'Missing ID' });
 
             const user = await User.findById(id);
