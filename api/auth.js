@@ -1,4 +1,4 @@
-export default handler = (req, res) => {
+export default function handler(req, res) {
     try {
         const { method } = req;
         const url = req.url;
@@ -11,6 +11,6 @@ export default handler = (req, res) => {
                 return res.status(404).json({ message: 'Route not found' })
         }
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ message: error.message || error })
     }
 }
