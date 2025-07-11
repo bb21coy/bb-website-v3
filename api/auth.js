@@ -32,18 +32,16 @@ export default async function handler(req, res) {
         
         switch (routeKey) {
             case 'POST /login':
-                const username = req.body?.username;
-                const password = req.body?.password;
+                var username = req.body?.username;
+                var password = req.body?.password;
 
-                if (!username || !password) {
-                    return res.status(401).json({ message: 'Missing username or password' });
-                }
+                if (!username || !password) return res.status(401).json({ message: 'Missing username or password' });
 
-                const users = await User.find({ name: username });
-                const match = await bcrypt.compare(password, users[0].password);
+                var users = await User.find({ name: username });
+                var match = await bcrypt.compare(password, users[0].password);
                     
                 if (match) {
-                    const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET);
+                    var token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET);
                     return res.status(200).json({ token });
                 } else {
                     return res.status(401).json({ message: 'Invalid username or password' });
@@ -59,8 +57,8 @@ export default async function handler(req, res) {
 
                 return res.status(200).json(user);
             case 'GET /get_own_account':
-                const decoded = decodeJWT(authorization);
-                const userId = decoded.id;
+                var decoded = decodeJWT(authorization);
+                var userId = decoded.id;
 
                 var user = await User.findById(userId);
                 if (!user) return res.status(404).json({ message: 'User not found' });
