@@ -50,26 +50,21 @@ export default async function handler(req, res) {
                 var id = req.query?.id;
                 if (!id) return res.status(400).json({ message: 'Missing ID' });
 
-                var user = await User.findById(id);
+                var user = await User.findById(id).select('-password');
                 if (!user) return res.status(404).json({ message: 'User not found' });
-
-                delete user.password;
 
                 return res.status(200).json(user);
             case 'GET /get_own_account':
                 var decoded = decodeJWT(authorization);
                 var userId = decoded.id;
 
-                var user = await User.findById(userId);
+                var user = await User.findById(userId).select('-password');
                 if (!user) return res.status(404).json({ message: 'User not found' });
 
-                delete user.password;
                 return res.status(200).json(user);
             case 'GET /get_multiple_accounts':
                 var id = req.query?.id;
-                var users = await User.find({ _id: { $in: idArray } });
-
-                users.map((user) => delete user.password);
+                var users = await User.find({ _id: { $in: idArray } }).select('-password');
 
                 return res.status(200).json(users);
             default:
