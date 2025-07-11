@@ -32,12 +32,12 @@ export default async function handler(req, res) {
                 return res.status(401).json({ message: 'Invalid username or password' });
             }
         case 'GET /get_account':
-            const id = req.query.id;
-            if (!id) return res.status(401).json({ message: 'Missing id' });
+            const id = req.query?.id;
+            if (!id) return res.status(400).json({ message: 'Missing ID' });
 
             const user = await User.findById(id);
             if (!user) return res.status(404).json({ message: 'User not found' });
-            
+
             return res.status(200).json(user);
         default:
             return res.status(401).json({ message: 'Invalid route' });
