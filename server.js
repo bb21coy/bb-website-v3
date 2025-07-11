@@ -9,7 +9,7 @@ const port = 3000;
 app.use(express.json());
 
 // Route for testing the handler
-app.post('/login', handler);
+app.get('/api/auth', handler);
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

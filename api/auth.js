@@ -3,14 +3,13 @@ import { connectToDatabase } from '../mongoose.js';
 import { User } from './users.js';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
 export default async function handler(req, res) {
     const route = req.headers['x-route']
     const method = req.method;
     if (!route) return res.status(401).json({ message: 'Missing route in headers' });
     const routeKey = `${method.toUpperCase()} ${route}`;
-
     await connectToDatabase();
     
     switch (routeKey) {
@@ -33,11 +32,12 @@ export default async function handler(req, res) {
             }
         case 'GET /get_account':
             const id = req.query?.id;
-            console.log(req.query);
             if (!id) return res.status(400).json({ message: 'Missing ID' });
 
             const user = await User.findById(id);
             if (!user) return res.status(404).json({ message: 'User not found' });
+
+            delete user.password;
 
             return res.status(200).json(user);
         default:

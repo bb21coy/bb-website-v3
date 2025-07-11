@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
 mongoose.set("strictQuery", true);
 
@@ -10,7 +10,7 @@ const connectToDatabase = async () => {
         console.log("Connected to DB!");
     } catch (err) {
         console.error("Error connecting to DB:", err);
-        throw err;  // Throw the error to be handled elsewhere
+        throw err;
     }
 };
 
