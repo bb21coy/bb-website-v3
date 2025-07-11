@@ -1,17 +1,20 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-dotenv.config({ quiet: true });
 
-mongoose.set("strictQuery", true);
+const MONGOOSE_URI = process.env.MONGOOSE_URI;
 
-const connectToDatabase = async () => {
-    try {
-        await mongoose.connect(process.env.MONGOOSE_URI);
-        console.log("Connected to DB!");
-    } catch (err) {
-        console.error("Error connecting to DB:", err);
-        throw err;
+if (!MONGOOSE_URI) throw new Error('MONGOOSE_URI not defined in environment');
+
+let cached = global.mongoose;
+if (!cached) cached = global.mongoose = { conn: null, promise: null };
+
+export async function connectToDatabase() {
+    if (cached.conn) return cached.conn;
+
+    if (!cached.promise) {
+        mongoose.set("strictQuery", true);
+        cached.promise = mongoose.connect(MONGOOSE_URI);
     }
-};
 
-export { connectToDatabase };
+    cached.conn = await cached.promise;
+    return cached.conn;
+}
