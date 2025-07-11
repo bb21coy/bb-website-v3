@@ -25,7 +25,16 @@ const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
     }
 }
 
+const checkAuthorization = (tokenType, res, allowedType = ["Admin", "Officer", "Primer", "Boy"]) => {
+    if (!tokenType) return res.status(400).json({ message: 'Missing token type' });
+    if (!allowedType.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
+}
+
 export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
     try {
         const route = req.headers['x-route']
         const authorization = req.headers['authorization'];
@@ -75,6 +84,7 @@ export default async function handler(req, res) {
             case 'GET /check_session':
                 return res.status(200).json({ valid: !!await decodeJWT(authorization, res, false) });
             case 'POST /logout':
+                if (!authorization) return res.status(401).json({ message: 'Missing authorization header' });
                 await Token.create({
                     token: authorization.split(' ')[1],
                     expiry: (jwt.decode(authorization.split(' ')[1]).exp) * 1000
@@ -83,9 +93,26 @@ export default async function handler(req, res) {
                 return res.status(200).json({ message: 'Successfully logged out' });
             case 'DELETE /delete_old_tokens':
                 await Token.deleteMany({ expiry: { $lt: Date.now() / 1000 } });
+
                 return res.status(200).json({ message: 'Successfully deleted old tokens' });
+            case 'GET /get_accounts_by_type':
+                var tokenType = await decodeJWT(authorization, res, false);
+                checkAuthorization(tokenType.account_type, res, ["Admin", "Officer", "Primer"]);
+
+                var type = req.query?.type;
+                if (!type) return res.status(400).json({ message: 'Missing type' });
+                if (!["Admin", "Officer", "Primer", "Boy"].includes(type)) return res.status(400).json({ message: 'Invalid type' });
+
+                var users = await User.find({ account_type: type }).select('-password');
+                return res.status(200).json(users);
+            case 'GET /get_graduated_accounts':
+                var tokenType = await decodeJWT(authorization, res, false);
+                checkAuthorization(tokenType.account_type, res, ["Admin", "Officer", "Primer"]);
+
+                var users = await User.find({ graduated: true }).select('-password');
+                return res.status(200).json(users);
             default:
-                return res.status(401).json({ message: 'Invalid route' });
+                return res.status(401).json({ message: 'Route not found' });
         }
     } catch (error) {
         console.error(error);

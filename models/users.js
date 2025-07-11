@@ -9,6 +9,15 @@ const UserSchema = new Schema(
         password: {
             type: String,
             required: true
+        },
+        account_type: {
+            type: String,
+            enum: ['Admin', 'Officer', 'Primer', 'Boy'],
+            required: true
+        },
+        graduated: {
+            type: Boolean,
+            required: true
         }
     },
     {
