@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         await connectToDatabase();
 
         const origin = req.headers.origin;
-        console.log(origin)
+        console.log(origin, req.headers)
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
