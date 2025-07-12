@@ -2,17 +2,19 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import connectToDatabase from '../mongoose.js';
 import User from '../models/users.js';
-import Cors from 'cors';
-import initMiddleware from '../middleware.js';
 
-const cors = initMiddleware(
-	Cors({
-		origin: '*',
-		methods: ['POST'],
-		allowedHeaders: ['Content-Type', 'Authorization'],
-		credentials: true,
-	})
-);
+module.exports = (req, res) => {
+	res.setHeader('Access-Control-Allow-Origin', '*');
+	res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+	res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+	if (req.method === 'OPTIONS') {
+		return res.status(200).end();
+	}
+
+	res.status(200).json({ message: 'Hello, World!' });
+};
+
 
 export default async function handler(req, res) {
 	await cors(req, res);
