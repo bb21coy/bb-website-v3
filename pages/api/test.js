@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import connectToDatabase from '../../mongoose.js';
-import User from '../../models/users.js';
+import connectToDatabase from '../mongoose.js';
+import User from '../models/users.js';
 import Cors from 'cors';
-import initMiddleware from '../../middleware.js';
+import initMiddleware from '../middleware.js';
 
 const cors = initMiddleware(
 	Cors({
