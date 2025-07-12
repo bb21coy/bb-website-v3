@@ -1,9 +1,9 @@
-import jwt from 'jsonwebtoken';
-import connectToDatabase from '../mongoose.js';
-import User from '../models/users.js';
-import Token from '../models/token.js';
-import bcrypt from 'bcrypt';
-import dotenv from 'dotenv';
+const jwt = require('jsonwebtoken');
+const connectToDatabase = require('../mongoose.js');
+const User = require('../models/users.js');
+const Token = require('../models/token.js');
+const bcrypt = require('bcrypt');
+const dotenv = require('dotenv');
 dotenv.config({ quiet: true });
 
 const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
@@ -30,15 +30,13 @@ const checkAuthorization = (tokenType, res, allowed = ["Admin", "Officer", "Prim
     if (!allowed.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
 };
 
-export default async function handler(req, res) {
-    // Set CORS headers
+module.exports = async (req, res) => {
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-    // Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -149,4 +147,4 @@ export default async function handler(req, res) {
         console.error(err);
         return res.status(500).json({ message: 'Internal server error', error: err.message });
     }
-}
+};
