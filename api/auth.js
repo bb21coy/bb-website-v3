@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 dotenv.config({ quiet: true });
 
-const decodeJWT = async (authorizationHeader) => {
+const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
     try {
         if (!authorizationHeader) throw new Error('Missing authorization header');
         const token = authorizationHeader.split(' ')[1];
@@ -18,99 +18,90 @@ const decodeJWT = async (authorizationHeader) => {
 
         return decoded;
     } catch (error) {
-        return { error: error.message };
+        if (sendResponse && res) {
+            return res.status(401).json({ message: error.message });
+        }
+        return null;
     }
 };
 
-const checkAuthorization = (tokenType, allowed = ["Admin", "Officer", "Primer", "Boy"]) => {
-    if (!tokenType) return 'Missing token type';
-    if (!allowed.includes(tokenType)) return 'Invalid token type';
-    return null;
+const checkAuthorization = (tokenType, res, allowed = ["Admin", "Officer", "Primer", "Boy"]) => {
+    if (!tokenType) return res.status(400).json({ message: 'Missing token type' });
+    if (!allowed.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
 };
 
 export default async function handler(req, res) {
-    const headers = {
-        'Access-Control-Allow-Origin': req.headers.origin || '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Credentials': 'true'
-    };
+    // Set CORS headers
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-    if (req.httpMethod === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers,
-            body: ''
-        };
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
 
     try {
         const route = req.headers['x-route'];
         const authorization = req.headers['authorization'];
-        const method = req.httpMethod;
+        const method = req.method;
 
-        if (!route) {
-            return { statusCode: 401, headers, body: JSON.stringify({ message: 'Missing route in headers' }) };
-        }
+        if (!route) return res.status(401).json({ message: 'Missing route in headers' });
 
         const routeKey = `${method.toUpperCase()} ${route}`;
         await connectToDatabase();
 
         switch (routeKey) {
             case 'POST /login': {
-                const { username, password } = JSON.parse(req.body || '{}');
-                if (!username || !password) {
-                    return { statusCode: 401, headers, body: JSON.stringify({ message: 'Missing username or password' }) };
-                }
+                const { username, password } = req.body || {};
+                if (!username || !password) return res.status(400).json({ message: 'Missing username or password' });
 
                 const users = await User.find({ name: username });
-                if (users.length === 0) {
-                    return { statusCode: 401, headers, body: JSON.stringify({ message: 'Invalid username or password' }) };
-                }
+                if (users.length === 0) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const match = await bcrypt.compare(password, users[0].password);
-                if (!match) {
-                    return { statusCode: 401, headers, body: JSON.stringify({ message: 'Invalid username or password' }) };
-                }
+                if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
-                return { statusCode: 200, headers, body: JSON.stringify({ token }) };
+                return res.status(200).json({ token });
             }
 
             case 'GET /get_account': {
-                const id = req.queryStringParameters?.id;
-                if (!id) return { statusCode: 400, headers, body: JSON.stringify({ message: 'Missing ID' }) };
+                const id = req.query?.id;
+                if (!id) return res.status(400).json({ message: 'Missing ID' });
 
                 const user = await User.findById(id).select('-password');
-                if (!user) return { statusCode: 404, headers, body: JSON.stringify({ message: 'User not found' }) };
+                if (!user) return res.status(404).json({ message: 'User not found' });
 
-                return { statusCode: 200, headers, body: JSON.stringify(user) };
+                return res.status(200).json(user);
             }
 
             case 'GET /get_own_account': {
-                const decoded = await decodeJWT(authorization);
-                if (decoded.error) return { statusCode: 401, headers, body: JSON.stringify({ message: decoded.error }) };
+                const decoded = await decodeJWT(authorization, res);
+                if (!decoded || decoded.error) return;
 
                 const user = await User.findById(decoded.id).select('-password');
-                if (!user) return { statusCode: 404, headers, body: JSON.stringify({ message: 'User not found' }) };
+                if (!user) return res.status(404).json({ message: 'User not found' });
 
-                return { statusCode: 200, headers, body: JSON.stringify(user) };
+                return res.status(200).json(user);
             }
 
             case 'GET /get_multiple_accounts': {
-                const ids = req.queryStringParameters?.id || [];
+                const ids = req.query?.id || [];
                 const idArray = Array.isArray(ids) ? ids : [ids];
                 const users = await User.find({ _id: { $in: idArray } }).select('-password');
-                return { statusCode: 200, headers, body: JSON.stringify(users) };
+                return res.status(200).json(users);
             }
 
             case 'GET /check_session': {
-                const decoded = await decodeJWT(authorization);
-                return { statusCode: 200, headers, body: JSON.stringify({ valid: !decoded.error }) };
+                const decoded = await decodeJWT(authorization, res, false);
+                return res.status(200).json({ valid: !!decoded && !decoded.error });
             }
 
             case 'POST /logout': {
-                if (!authorization) return { statusCode: 401, headers, body: JSON.stringify({ message: 'Missing authorization header' }) };
+                if (!authorization) return res.status(401).json({ message: 'Missing authorization header' });
 
                 const token = authorization.split(' ')[1];
                 await Token.create({
@@ -118,48 +109,44 @@ export default async function handler(req, res) {
                     expiry: jwt.decode(token).exp * 1000
                 });
 
-                return { statusCode: 200, headers, body: JSON.stringify({ message: 'Successfully logged out' }) };
+                return res.status(200).json({ message: 'Successfully logged out' });
             }
 
             case 'DELETE /delete_old_tokens': {
                 await Token.deleteMany({ expiry: { $lt: Date.now() / 1000 } });
-                return { statusCode: 200, headers, body: JSON.stringify({ message: 'Successfully deleted old tokens' }) };
+                return res.status(200).json({ message: 'Successfully deleted old tokens' });
             }
 
             case 'GET /get_accounts_by_type': {
-                const decoded = await decodeJWT(authorization);
-                if (decoded.error) return { statusCode: 401, headers, body: JSON.stringify({ message: decoded.error }) };
+                const decoded = await decodeJWT(authorization, res, false);
+                if (!decoded || decoded.error) return;
 
-                const error = checkAuthorization(decoded.account_type, ["Admin", "Officer", "Primer"]);
-                if (error) return { statusCode: 403, headers, body: JSON.stringify({ message: error }) };
+                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
+                if (authError) return;
 
-                const type = req.queryStringParameters?.type;
-                if (!type) return { statusCode: 400, headers, body: JSON.stringify({ message: 'Missing type' }) };
+                const type = req.query?.type;
+                if (!type) return res.status(400).json({ message: 'Missing type' });
 
                 const users = await User.find({ account_type: type }).select('-password');
-                return { statusCode: 200, headers, body: JSON.stringify(users) };
+                return res.status(200).json(users);
             }
 
             case 'GET /get_graduated_accounts': {
-                const decoded = await decodeJWT(authorization);
-                if (decoded.error) return { statusCode: 401, headers, body: JSON.stringify({ message: decoded.error }) };
+                const decoded = await decodeJWT(authorization, res, false);
+                if (!decoded || decoded.error) return;
 
-                const error = checkAuthorization(decoded.account_type, ["Admin", "Officer", "Primer"]);
-                if (error) return { statusCode: 403, headers, body: JSON.stringify({ message: error }) };
+                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
+                if (authError) return;
 
                 const users = await User.find({ graduated: true }).select('-password');
-                return { statusCode: 200, headers, body: JSON.stringify(users) };
+                return res.status(200).json(users);
             }
 
             default:
-                return { statusCode: 404, headers, body: JSON.stringify({ message: 'Route not found' }) };
+                return res.status(404).json({ message: 'Route not found' });
         }
     } catch (err) {
         console.error(err);
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ message: 'Internal server error', error: err.message })
-        };
+        return res.status(500).json({ message: 'Internal server error', error: err.message });
     }
-};
+}
