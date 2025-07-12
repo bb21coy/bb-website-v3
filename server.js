@@ -1,6 +1,6 @@
 // /server.js
 import express from 'express';
-import handler from './pages/api/test.js';  // Ensure the path is correct to the auth.js file
+import handler from './api/test.js';  // Ensure the path is correct to the auth.js file
 
 const app = express();
 const port = 5000;
