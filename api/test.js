@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import connectToDatabase from '../../mongoose';
 import User from '../../models/users';
 import Cors from 'cors';
-import initMiddleware from '../../lib/init-middleware';
+import initMiddleware from '../middleware';
 
 const cors = initMiddleware(
 	Cors({
