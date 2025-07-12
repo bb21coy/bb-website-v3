@@ -1,23 +1,37 @@
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import connectToDatabase from '../../mongoose';
+import User from '../../models/users';
+import Cors from 'cors';
+import initMiddleware from '../../lib/init-middleware';
+
+const cors = initMiddleware(
+	Cors({
+		origin: '*', // or your frontend domain
+		methods: ['POST'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+		credentials: true,
+	})
+);
+
 export default async function handler(req, res) {
-  const origin = req.headers.get('origin');
-  const allowedOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+	await cors(req, res);
+	if (req.method !== 'POST') {
+		return res.status(405).json({ message: 'Method not allowed' });
+	}
 
-  const headers = new Headers({
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-  });
+	await connectToDatabase();
+	const { username, password } = req.body || {};
+	if (!username || !password) {
+		return res.status(400).json({ message: 'Missing username or password' });
+	}
 
-  if (allowedOrigins.includes(origin)) {
-    headers.set('Access-Control-Allow-Origin', origin);
-  }
+	const user = await User.findOne({ name: username });
+	if (!user) return res.status(401).json({ message: 'Invalid username or password' });
 
-  if (req.method === 'OPTIONS') {
-    return res.json({ status: 200, headers });
-  }
+	const match = await bcrypt.compare(password, user.password);
+	if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
-  return new Response(JSON.stringify({ message: 'CORS passed via Edge Function' }), {
-    status: 200,
-    headers,
-  });
+	const token = jwt.sign({ id: user._id, account_type: user.account_type }, process.env.JWT_SECRET, { expiresIn: '3h' });
+	return res.status(200).json({ token });
 }
