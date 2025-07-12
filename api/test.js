@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import connectToDatabase from '../../mongoose';
-import User from '../../models/users';
+import connectToDatabase from '../mongoose.js';
+import User from '../models/users.js';
 import Cors from 'cors';
-import initMiddleware from '../middleware';
+import initMiddleware from '../middleware.js';
 
 const cors = initMiddleware(
 	Cors({
-		origin: '*', // or your frontend domain
+		origin: '*',
 		methods: ['POST'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		credentials: true,
