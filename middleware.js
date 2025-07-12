@@ -1,8 +1,24 @@
 export const config = {
-    matcher: '/api/:path*',
+    matcher: '/api/:path*', // Intercept all /api/* routes
 };
 
 export default function middleware(request) {
-    console.log('🔥 Middleware ran:', request.url);
+    console.log(request);
+    const origin = request.headers.get('origin') || '*';
+
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+        return new Response(null, {
+            status: 204,
+            headers: {
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                'Access-Control-Max-Age': '86400',
+            },
+        });
+    }
+
+    // Allow the request to continue to the API handler
     return;
 }
