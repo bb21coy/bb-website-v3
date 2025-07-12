@@ -28,15 +28,15 @@ const checkAuthorization = (tokenType, allowed = ["Admin", "Officer", "Primer", 
     return null;
 };
 
-export const handler = async (event, context) => {
+export default async function handler(req, res) {
     const headers = {
-        'Access-Control-Allow-Origin': event.headers.origin || '*',
+        'Access-Control-Allow-Origin': req.headers.origin || '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Credentials': 'true'
     };
 
-    if (event.httpMethod === 'OPTIONS') {
+    if (req.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
             headers,
@@ -45,9 +45,9 @@ export const handler = async (event, context) => {
     }
 
     try {
-        const route = event.headers['x-route'];
-        const authorization = event.headers['authorization'];
-        const method = event.httpMethod;
+        const route = req.headers['x-route'];
+        const authorization = req.headers['authorization'];
+        const method = req.httpMethod;
 
         if (!route) {
             return { statusCode: 401, headers, body: JSON.stringify({ message: 'Missing route in headers' }) };
@@ -58,7 +58,7 @@ export const handler = async (event, context) => {
 
         switch (routeKey) {
             case 'POST /login': {
-                const { username, password } = JSON.parse(event.body || '{}');
+                const { username, password } = JSON.parse(req.body || '{}');
                 if (!username || !password) {
                     return { statusCode: 401, headers, body: JSON.stringify({ message: 'Missing username or password' }) };
                 }
@@ -78,7 +78,7 @@ export const handler = async (event, context) => {
             }
 
             case 'GET /get_account': {
-                const id = event.queryStringParameters?.id;
+                const id = req.queryStringParameters?.id;
                 if (!id) return { statusCode: 400, headers, body: JSON.stringify({ message: 'Missing ID' }) };
 
                 const user = await User.findById(id).select('-password');
@@ -98,7 +98,7 @@ export const handler = async (event, context) => {
             }
 
             case 'GET /get_multiple_accounts': {
-                const ids = event.queryStringParameters?.id || [];
+                const ids = req.queryStringParameters?.id || [];
                 const idArray = Array.isArray(ids) ? ids : [ids];
                 const users = await User.find({ _id: { $in: idArray } }).select('-password');
                 return { statusCode: 200, headers, body: JSON.stringify(users) };
@@ -133,7 +133,7 @@ export const handler = async (event, context) => {
                 const error = checkAuthorization(decoded.account_type, ["Admin", "Officer", "Primer"]);
                 if (error) return { statusCode: 403, headers, body: JSON.stringify({ message: error }) };
 
-                const type = event.queryStringParameters?.type;
+                const type = req.queryStringParameters?.type;
                 if (!type) return { statusCode: 400, headers, body: JSON.stringify({ message: 'Missing type' }) };
 
                 const users = await User.find({ account_type: type }).select('-password');
