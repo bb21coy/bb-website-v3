@@ -19,6 +19,11 @@ export default function middleware(request) {
         });
     }
 
-    // Allow the request to continue to the API handler
-    return;
+    return new Response(null, {
+        status: 200,
+        headers: {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Credentials': 'true',
+        },
+    });
 }
