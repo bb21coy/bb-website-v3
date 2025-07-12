@@ -1,8 +1,9 @@
-const corsMiddleware = initMiddleware(
-  cors({ origin: '*', methods: ['GET', 'POST'] })
-);
-
-export default async function handler(req, res) {
-  await corsMiddleware(req, res);
-  res.status(200).json({ message: 'Hello with CORS' });
+export default function initMiddleware(middleware) {
+    return (req, res) =>
+        new Promise((resolve, reject) => {
+            middleware(req, res, (result) => {
+                if (result instanceof Error) return reject(result);
+                return resolve(result);
+            });
+        });
 }
