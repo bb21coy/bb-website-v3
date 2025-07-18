@@ -44,7 +44,6 @@ module.exports = async (req, res) => {
         const route = req.headers['x-route'];
         const cookies = cookie.parse(req.headers.cookie || '');
         const authorization = cookies.token;
-        console.log(`Authorization: ${authorization}`, req.headers);
         const method = req.method;
 
         if (!route) return res.status(401).json({ message: 'Missing route in headers' });
@@ -101,14 +100,14 @@ module.exports = async (req, res) => {
             }
 
             case 'POST /logout': {
-                if (!authorization) return res.status(401).json({ message: 'Missing authorization header' });
+                const decoded = await decodeJWT(authorization, res, false);
 
-                const token = authorization.split(' ')[1];
                 await Token.create({
-                    token,
-                    expiry: jwt.decode(token).exp * 1000
+                    authorization,
+                    expiry: decoded.exp * 1000
                 });
 
+                res.setHeader('Set-Cookie', 'token=; HttpOnly; Secure; SameSite=None; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
                 return res.status(200).json({ message: 'Successfully logged out' });
             }
 
