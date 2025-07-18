@@ -9,7 +9,7 @@ dotenv.config({ quiet: true });
 
 const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
     try {
-        if (!authorizationHeader) throw new Error('Missing authorization header');
+        if (!authorizationHeader) throw new Error('Missing authorization token');
         const token = authorizationHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         console.log(decoded);
@@ -46,6 +46,7 @@ module.exports = async (req, res) => {
         const route = req.headers['x-route'];
         const cookies = cookie.parse(req.headers.cookie || '');
         const authorization = cookies.token;
+        console.log(`Authorization: ${authorization}`, req.headers);
         const method = req.method;
 
         if (!route) return res.status(401).json({ message: 'Missing route in headers' });
@@ -65,7 +66,6 @@ module.exports = async (req, res) => {
                 if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
-                console.log(process.env.JWT_SECRET)
                 res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=${3 * 60 * 60}`);
                 return res.status(200).json({ message: 'Logged in successfully' });
             }
