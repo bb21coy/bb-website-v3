@@ -97,6 +97,7 @@ module.exports = async (req, res) => {
             }
 
             case 'GET /check_session': {
+                console.log(authorization);
                 const decoded = await decodeJWT(authorization, res, false);
                 return res.status(200).json({ valid: !!decoded && !decoded.error });
             }
