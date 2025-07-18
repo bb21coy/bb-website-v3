@@ -64,7 +64,7 @@ module.exports = async (req, res) => {
 
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
                 res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; Max-Age=${3 * 60 * 60}`);  // 3 hours
-                return res.status(200);
+                return res.status(200).json({ message: 'Logged in successfully' });
             }
 
             case 'GET /get_account': {
