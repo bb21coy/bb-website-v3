@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-route');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-route');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     if (req.method === 'OPTIONS') {
@@ -79,7 +79,6 @@ module.exports = async (req, res) => {
 
             case 'GET /get_own_account': {
                 const decoded = await decodeJWT(authorization, res);
-                if (!decoded || decoded.error) return;
 
                 const user = await User.findById(decoded.id).select('-password');
                 if (!user) return res.status(404).json({ message: 'User not found' });
