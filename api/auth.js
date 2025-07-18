@@ -63,12 +63,7 @@ module.exports = async (req, res) => {
                 if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
-                res.cookie('token', token, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'None',
-                    maxAge: 3 * 60 * 60 * 1000
-                });
+                res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; Max-Age=${3 * 60 * 60}`);  // 3 hours
                 return res.status(200);
             }
 
