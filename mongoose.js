@@ -16,10 +16,7 @@ async function connectToDatabase() {
 
     if (!cached.promise) {
         mongoose.set("strictQuery", true);
-        cached.promise = mongoose.connect(MONGOOSE_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        cached.promise = mongoose.connect(MONGOOSE_URI);
     }
 
     cached.conn = await cached.promise;
