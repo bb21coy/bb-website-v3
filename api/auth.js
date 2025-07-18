@@ -7,12 +7,10 @@ const bcrypt = require('bcrypt');
 const dotenv = require('dotenv');
 dotenv.config({ quiet: true });
 
-const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
+const decodeJWT = async (token, res, sendResponse = true) => {
     try {
-        if (!authorizationHeader) throw new Error('Missing authorization token');
-        const token = authorizationHeader.split(' ')[1];
+        if (!token) throw new Error('Missing authorization token');
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log(decoded);
         if (!decoded) throw new Error('Invalid token');
 
         if (decoded.exp < Date.now() / 1000) throw new Error('Token expired');
