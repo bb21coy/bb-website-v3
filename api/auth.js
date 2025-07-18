@@ -102,7 +102,7 @@ module.exports = async (req, res) => {
                 const decoded = await decodeJWT(authorization, res, false);
 
                 await Token.create({
-                    authorization,
+                    token: authorization,
                     expiry: decoded.exp * 1000
                 });
 
