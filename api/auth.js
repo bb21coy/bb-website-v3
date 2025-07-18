@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
 
     try {
         const route = req.headers['x-route'];
-        const authorization = req.headers['authorization'];
+        const authorization = req.cookies['token'] || "";
         const method = req.method;
 
         if (!route) return res.status(401).json({ message: 'Missing route in headers' });
@@ -63,7 +63,13 @@ module.exports = async (req, res) => {
                 if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
-                return res.status(200).json({ token });
+                res.cookie('token', token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'None',
+                    maxAge: 3 * 60 * 60 * 1000
+                });
+                return res.status(200);
             }
 
             case 'GET /get_account': {
