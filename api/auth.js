@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const cookie = require('cookie');
 const connectToDatabase = require('../mongoose.js');
 const User = require('../models/users.js');
 const Token = require('../models/token.js');
@@ -43,7 +44,8 @@ module.exports = async (req, res) => {
 
     try {
         const route = req.headers['x-route'];
-        const authorization = req.cookies['token'] || "";
+        const cookies = cookie.parse(req.headers.cookie || '');
+        const authorization = cookies.token;
         const method = req.method;
 
         if (!route) return res.status(401).json({ message: 'Missing route in headers' });
