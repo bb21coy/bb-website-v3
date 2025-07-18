@@ -64,6 +64,7 @@ module.exports = async (req, res) => {
                 const match = await bcrypt.compare(password, users[0].password);
                 if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
+                console.log(`User ${users[0].name} logged in successfully`);
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
                 res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; Max-Age=${3 * 60 * 60}`);  // 3 hours
                 return res.status(200).json({ message: 'Logged in successfully' });
