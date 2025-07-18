@@ -12,6 +12,8 @@ const decodeJWT = async (authorizationHeader, res, sendResponse = true) => {
         if (!authorizationHeader) throw new Error('Missing authorization header');
         const token = authorizationHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log(decoded);
+        if (!decoded) throw new Error('Invalid token');
 
         if (decoded.exp < Date.now() / 1000) throw new Error('Token expired');
         const used = await Token.findOne({ token });
@@ -63,6 +65,7 @@ module.exports = async (req, res) => {
                 if (!match) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const token = jwt.sign({ id: users[0]._id }, process.env.JWT_SECRET, { expiresIn: '3h' });
+                console.log(process.env.JWT_SECRET)
                 res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=${3 * 60 * 60}`);
                 return res.status(200).json({ message: 'Logged in successfully' });
             }
@@ -95,7 +98,6 @@ module.exports = async (req, res) => {
             }
 
             case 'GET /check_session': {
-                console.log(authorization);
                 const decoded = await decodeJWT(authorization, res, false);
                 return res.status(200).json({ valid: !!decoded && !decoded.error });
             }
