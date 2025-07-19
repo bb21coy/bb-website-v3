@@ -123,6 +123,7 @@ module.exports = async (req, res) => {
                 if (authError) return;
 
                 const type = req.query?.type;
+                console.log("Type:", req.query);
                 if (!type) return res.status(400).json({ message: 'Missing type' });
 
                 const users = await User.find({ account_type: type }).select('-password');
