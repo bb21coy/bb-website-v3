@@ -122,9 +122,10 @@ module.exports = async (req, res) => {
                 const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
                 if (authError) return;
 
+                console.log("Fetching accounts by type:", req.query);
                 const type = req.query?.type;
-                console.log("Type:", req.query);
                 if (!type) return res.status(400).json({ message: 'Missing type' });
+                if (!["Admin", "Officer", "Primer"].includes(type)) return res.status(400).json({ message: 'Invalid type' });
 
                 const users = await User.find({ account_type: type }).select('-password');
                 return res.status(200).json(users);
