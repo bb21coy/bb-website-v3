@@ -111,13 +111,27 @@ module.exports = async (req, res) => {
 
                 const decoded = await decodeJWT(authorization, res, false);
                 const hashedPassword = await bcrypt.hash(password, 10);
-                
+
                 await User.findByIdAndUpdate(decoded.id, {
                     user_name: username,
                     password: hashedPassword
                 })
 
                 return res.status(200).json({ message: 'Account updated successfully' });
+            }
+
+            case 'POST /create_account': {
+                const decoded = await decodeJWT(authorization, res, false);
+                checkAuthorization(decoded.account_type, res, ["Admin", "Officer"]);
+
+                const { account_name, user_name, abbreviated_name, password, account_type, rank, level, class1, credentials, honorifics, roll_call } = req.body || {};
+                if (!account_name || !user_name || !abbreviated_name || !password || !account_type || !rank || !level || !class1 || !credentials || !honorifics || !roll_call) return res.status(400).json({ message: 'Missing required fields' });
+
+                const hashedPassword = await bcrypt.hash(password, 10);
+                const newUser = new User({ account_name, user_name, abbreviated_name, password: hashedPassword, account_type, rank, level, class1, credentials, honorifics, roll_call });
+                
+                await newUser.save();
+                return res.status(201).send();
             }
 
             default:
