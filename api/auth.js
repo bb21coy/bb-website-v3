@@ -140,6 +140,21 @@ module.exports = async (req, res) => {
                 return res.status(200).json(users);
             }
 
+            case 'update_username_password': {
+                const { username, password } = req.body || {};
+                if (!username || !password) return res.status(400).json({ message: 'Missing username or password' });
+
+                const decoded = await decodeJWT(authorization, res, false);
+                const hashedPassword = await bcrypt.hash(password, 10);
+                
+                await User.findByIdAndUpdate(decoded.id, {
+                    user_name: username,
+                    password: hashedPassword
+                })
+
+                return res.status(200).json({ message: 'Account updated successfully' });
+            }
+
             default:
                 return res.status(404).json({ message: 'Route not found' });
         }

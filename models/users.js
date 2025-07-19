@@ -6,6 +6,11 @@ const UserSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        user_name: {
+            type: String,
+            required: true,
+            unique: true
+        },
         password: {
             type: String,
             required: true
@@ -18,7 +23,16 @@ const UserSchema = new mongoose.Schema(
         graduated: {
             type: Boolean,
             required: true
-        }
+        },
+        appointment: {
+            type: String,
+            default: null
+        },
+        honorifics: {
+            enum: ['Mr', 'Ms', 'Mrs'],
+            type: String,
+            default: null
+        },
     },
     {
         timestamps: true
