@@ -151,7 +151,6 @@ module.exports = async (req, res) => {
 
                 const hashedPassword = await bcrypt.hash(password, 10);
                 const newUser = new User({ account_name, user_name, abbreviated_name, password: hashedPassword, account_type, rank, level, class1, credentials, honorifics, roll_call });
-                console.log("Creating new user:", newUser);
 
                 await newUser.save();
                 return res.status(201).send();
