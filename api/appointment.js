@@ -55,7 +55,14 @@ module.exports = async (req, res) => {
             case 'GET /get_appointments':
                 await decodeJWT(authorization, res);
                 const appointments = await Appointment.find();
-                return res.status(200).json(appointments);
+
+                let appointmentToAccounts = [];
+                for (let appointment of appointments) {
+                    const user = await User.findById(appointment.account_id, '_id account_name');
+                    if (user) appointmentToAccounts.push(user);
+                }
+
+                return res.status(200).json({ appointments, appointment_to_accounts: appointmentToAccounts });
             
             case 'POST /create_appointment':
                 var decoded = await decodeJWT(authorization, res);
