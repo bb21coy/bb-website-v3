@@ -1,0 +1,130 @@
+const jwt = require('jsonwebtoken');
+const cookie = require('cookie');
+const connectToDatabase = require('../mongoose.js');
+const User = require('../models/users.js');
+const Token = require('../models/token.js');
+const bcrypt = require('bcrypt');
+const dotenv = require('dotenv');
+dotenv.config({ quiet: true });
+
+const decodeJWT = async (token, res, sendResponse = true) => {
+    try {
+        if (!token) throw new Error('Missing authorization token');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decoded) throw new Error('Invalid token');
+
+        if (decoded.exp < Date.now() / 1000) throw new Error('Token expired');
+        const used = await Token.findOne({ token });
+        if (used) throw new Error('Token already used');
+
+        return decoded;
+    } catch (error) {
+        if (sendResponse && res) return res.status(401).json({ message: error.message });
+        return null;
+    }
+};
+
+const checkAuthorization = (tokenType, res, allowed = ["Admin", "Officer", "Primer", "Boy"]) => {
+    if (!tokenType) return res.status(400).json({ message: 'Missing token type' });
+    if (!allowed.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
+};
+
+module.exports = async (req, res) => {
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-route');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    try {
+        const route = req.headers['x-route'];
+        const cookies = cookie.parse(req.headers.cookie || '');
+        const authorization = cookies.token;
+        const method = req.method;
+
+        if (!route) return res.status(401).json({ message: 'Missing route in headers' });
+
+        const routeKey = `${method.toUpperCase()} ${route}`;
+        await connectToDatabase();
+
+        switch (routeKey) {
+            case 'GET /get_account': {
+                const id = req.query?.id;
+                if (!id) return res.status(400).json({ message: 'Missing ID' });
+
+                const user = await User.findById(id).select('-password');
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                return res.status(200).json(user);
+            }
+
+            case 'GET /get_own_account': {
+                const decoded = await decodeJWT(authorization, res);
+
+                const user = await User.findById(decoded.id).select('-password');
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                return res.status(200).json(user);
+            }
+
+            case 'GET /get_multiple_accounts': {
+                const ids = req.query?.id || [];
+                const idArray = Array.isArray(ids) ? ids : [ids];
+                const users = await User.find({ _id: { $in: idArray } }).select('-password');
+                return res.status(200).json(users);
+            }
+
+            case 'GET /get_accounts_by_type': {
+                const decoded = await decodeJWT(authorization, res, false);
+                if (!decoded || decoded.error) return;
+
+                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
+                if (authError) return;
+
+                console.log("Fetching accounts by type:", req.query);
+                const type = req.query?.type;
+                if (!type) return res.status(400).json({ message: 'Missing type' });
+                if (!["Admin", "Officer", "Primer"].includes(type)) return res.status(400).json({ message: 'Invalid type' });
+
+                const users = await User.find({ account_type: type }).select('-password');
+                return res.status(200).json(users);
+            }
+
+            case 'GET /get_graduated_accounts': {
+                const decoded = await decodeJWT(authorization, res, false);
+                if (!decoded || decoded.error) return;
+
+                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
+                if (authError) return;
+
+                const users = await User.find({ graduated: true }).select('-password');
+                return res.status(200).json(users);
+            }
+
+            case 'PUT /update_username_password': {
+                const { username, password } = req.body || {};
+                if (!username || !password) return res.status(400).json({ message: 'Missing username or password' });
+
+                const decoded = await decodeJWT(authorization, res, false);
+                const hashedPassword = await bcrypt.hash(password, 10);
+                
+                await User.findByIdAndUpdate(decoded.id, {
+                    user_name: username,
+                    password: hashedPassword
+                })
+
+                return res.status(200).json({ message: 'Account updated successfully' });
+            }
+
+            default:
+                return res.status(404).json({ message: 'Route not found' });
+        }
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Internal server error', error: err.message });
+    }
+};

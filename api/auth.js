@@ -24,11 +24,6 @@ const decodeJWT = async (token, res, sendResponse = true) => {
     }
 };
 
-const checkAuthorization = (tokenType, res, allowed = ["Admin", "Officer", "Primer", "Boy"]) => {
-    if (!tokenType) return res.status(400).json({ message: 'Missing token type' });
-    if (!allowed.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
-};
-
 module.exports = async (req, res) => {
     const origin = req.headers.origin || '*';
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -67,32 +62,6 @@ module.exports = async (req, res) => {
                 return res.status(200).json({ message: 'Logged in successfully' });
             }
 
-            case 'GET /get_account': {
-                const id = req.query?.id;
-                if (!id) return res.status(400).json({ message: 'Missing ID' });
-
-                const user = await User.findById(id).select('-password');
-                if (!user) return res.status(404).json({ message: 'User not found' });
-
-                return res.status(200).json(user);
-            }
-
-            case 'GET /get_own_account': {
-                const decoded = await decodeJWT(authorization, res);
-
-                const user = await User.findById(decoded.id).select('-password');
-                if (!user) return res.status(404).json({ message: 'User not found' });
-
-                return res.status(200).json(user);
-            }
-
-            case 'GET /get_multiple_accounts': {
-                const ids = req.query?.id || [];
-                const idArray = Array.isArray(ids) ? ids : [ids];
-                const users = await User.find({ _id: { $in: idArray } }).select('-password');
-                return res.status(200).json(users);
-            }
-
             case 'GET /check_session': {
                 const decoded = await decodeJWT(authorization, res, false);
                 return res.status(200).json({ valid: !!decoded && !decoded.error });
@@ -113,48 +82,6 @@ module.exports = async (req, res) => {
             case 'DELETE /delete_old_tokens': {
                 await Token.deleteMany({ expiry: { $lt: Date.now() / 1000 } });
                 return res.status(200).json({ message: 'Successfully deleted old tokens' });
-            }
-
-            case 'GET /get_accounts_by_type': {
-                const decoded = await decodeJWT(authorization, res, false);
-                if (!decoded || decoded.error) return;
-
-                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
-                if (authError) return;
-
-                console.log("Fetching accounts by type:", req.query);
-                const type = req.query?.type;
-                if (!type) return res.status(400).json({ message: 'Missing type' });
-                if (!["Admin", "Officer", "Primer"].includes(type)) return res.status(400).json({ message: 'Invalid type' });
-
-                const users = await User.find({ account_type: type }).select('-password');
-                return res.status(200).json(users);
-            }
-
-            case 'GET /get_graduated_accounts': {
-                const decoded = await decodeJWT(authorization, res, false);
-                if (!decoded || decoded.error) return;
-
-                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
-                if (authError) return;
-
-                const users = await User.find({ graduated: true }).select('-password');
-                return res.status(200).json(users);
-            }
-
-            case 'update_username_password': {
-                const { username, password } = req.body || {};
-                if (!username || !password) return res.status(400).json({ message: 'Missing username or password' });
-
-                const decoded = await decodeJWT(authorization, res, false);
-                const hashedPassword = await bcrypt.hash(password, 10);
-                
-                await User.findByIdAndUpdate(decoded.id, {
-                    user_name: username,
-                    password: hashedPassword
-                })
-
-                return res.status(200).json({ message: 'Account updated successfully' });
             }
 
             default:
