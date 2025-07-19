@@ -27,6 +27,7 @@ const decodeJWT = async (token, res, sendResponse = true) => {
 const checkAuthorization = (tokenType, res, allowed = ["Admin", "Officer", "Primer", "Boy"]) => {
     if (!tokenType) return res.status(400).json({ message: 'Missing token type' });
     if (!allowed.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
+    return null;
 };
 
 module.exports = async (req, res) => {
@@ -64,9 +65,10 @@ module.exports = async (req, res) => {
 
                 return res.status(200).json({ appointments, appointment_to_accounts: appointmentToAccounts });
             
-            case 'POST /create_appointment':
-                var decoded = await decodeJWT(authorization, res);
-                checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+            case 'POST /create_appointment': {
+                const decoded = await decodeJWT(authorization, res);
+                const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+                if (authError) return;
 
                 var { appointment_name, account_type, account_id } = req.body || {};
                 if (!appointment_name || !account_type || !account_id) return res.status(400).json({ message: 'Missing appointment details' });
@@ -74,12 +76,14 @@ module.exports = async (req, res) => {
                 const newAppointment = new Appointment({ appointment_name, account_type, account_id });
                 await newAppointment.save();
                 return res.status(201).json({ message: 'Appointment created successfully' });
+            }
 
-            case 'PUT /update_appointment':
-                var decoded = await decodeJWT(authorization, res);
-                checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+            case 'PUT /update_appointment': {
+                const decoded = await decodeJWT(authorization, res);
+                const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+                if (authError) return;
 
-                var { account_id, appointment_id } = req.body || {};
+                const { account_id, appointment_id } = req.body || {};
                 if (!account_id || !appointment_id) return res.status(400).json({ message: 'Missing appointment ID or account ID' });
 
                 const appointment = await Appointment.findById(appointment_id);
@@ -87,18 +91,21 @@ module.exports = async (req, res) => {
 
                 await Appointment.updateOne({ _id: appointment_id }, { account_id });
                 return res.status(200).json({ message: 'Appointment updated successfully' });
+            }
 
-            case 'DELETE /delete_appointment':
-                var decoded = await decodeJWT(authorization, res);
-                checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+            case 'DELETE /delete_appointment': {
+                const decoded = await decodeJWT(authorization, res);
+                const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+                if (authError) return;
 
-                var { appointment_id } = req.body || {};
+                const { appointment_id } = req.body || {};
                 if (!appointment_id) return res.status(400).json({ message: 'Missing appointment ID' });
 
                 const deletedAppointment = await Appointment.findByIdAndDelete(appointment_id);
                 if (!deletedAppointment) return res.status(404).json({ message: 'Appointment not found' });
                 return res.status(200).json({ message: 'Appointment deleted successfully' });
-            
+            }
+
             default:
                 return res.status(404).json({ message: 'Route not found' });
         }

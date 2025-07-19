@@ -27,6 +27,7 @@ const decodeJWT = async (token, res, sendResponse = true) => {
 const checkAuthorization = (tokenType, res, allowed = ["Admin", "Officer", "Primer", "Boy"]) => {
     if (!tokenType) return res.status(400).json({ message: 'Missing token type' });
     if (!allowed.includes(tokenType)) return res.status(403).json({ message: 'Invalid token type' });
+    return null;
 };
 
 module.exports = async (req, res) => {
@@ -82,13 +83,15 @@ module.exports = async (req, res) => {
                 const decoded = await decodeJWT(authorization, res, false);
                 if (!decoded || decoded.error) return;
 
-                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Admin", "Officer", "Primer"]);
                 if (authError) return;
 
-                console.log("Fetching accounts by type:", req.query);
                 const type = req.query?.type;
                 if (!type) return res.status(400).json({ message: 'Missing type' });
-                if (!["Admin", "Officer", "Primer"].includes(type)) return res.status(400).json({ message: 'Invalid type' });
+                if (!["Admin", "Officer", "Primer", "Boy"].includes(type)) return res.status(400).json({ message: 'Invalid type' });
 
                 const users = await User.find({ account_type: type }).select('-password');
                 return res.status(200).json(users);
@@ -98,7 +101,10 @@ module.exports = async (req, res) => {
                 const decoded = await decodeJWT(authorization, res, false);
                 if (!decoded || decoded.error) return;
 
-                const authError = checkAuthorization(decoded.account_type, res, ["Admin", "Officer", "Primer"]);
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Admin", "Officer", "Primer"]);
                 if (authError) return;
 
                 const users = await User.find({ graduated: true }).select('-password');
@@ -122,14 +128,31 @@ module.exports = async (req, res) => {
 
             case 'POST /create_account': {
                 const decoded = await decodeJWT(authorization, res, false);
-                checkAuthorization(decoded.account_type, res, ["Admin", "Officer"]);
+                if (!decoded || decoded.error) return;
 
-                const { account_name, user_name, abbreviated_name, password, account_type, rank, level, class1, credentials, honorifics, roll_call } = req.body || {};
-                if (!account_name || !user_name || !abbreviated_name || !password || !account_type || !rank || !level || !class1 || !credentials || !honorifics || !roll_call) return res.status(400).json({ message: 'Missing required fields' });
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Admin", "Officer"]);
+                if (authError) return;
+
+                let { account_name, user_name, abbreviated_name, password, account_type, rank, level, class1, credentials, honorifics, roll_call } = req.body || {};
+                
+                let missing = [];
+                for (const field of ["account_name", "user_name", "abbreviated_name", "password", "account_type"]) {
+                    if (!req.body[field]) missing.push(field);
+                }
+
+                if (missing.length > 0) return res.status(400).json({ message: `Missing fields: ${missing.join(', ')}` });
+
+                for (const field of ["rank", "level", "class1", "credentials", "honorifics"]) {
+                    if (eval(field) === "") eval(`${field} = null`);
+                };
 
                 const hashedPassword = await bcrypt.hash(password, 10);
                 const newUser = new User({ account_name, user_name, abbreviated_name, password: hashedPassword, account_type, rank, level, class1, credentials, honorifics, roll_call });
-                
+                console.log("Creating new user:", newUser);
+
                 await newUser.save();
                 return res.status(201).send();
             }

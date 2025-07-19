@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { validate } = require('./token');
 
 const UserSchema = new mongoose.Schema(
     {
@@ -30,11 +31,11 @@ const UserSchema = new mongoose.Schema(
         account_type: {
             type: String,
             enum: ['Admin', 'Officer', 'Primer', 'Boy'],
-            required: true
+            required: true,
         },
         graduated: {
             type: Boolean,
-            required: true
+            default: false
         },
         appointment: {
             type: String,
@@ -54,14 +55,14 @@ const UserSchema = new mongoose.Schema(
             type: String,
             default: null,
             validate: {
-                validator: (value) => {
+                validator: function (value) {
                     const allowedRanks = this.account_type === 'Boy'
-                    ? ['REC', 'PTE', 'LCP', 'CPL', 'SGT', 'SSG', 'WO']
-                    : this.account_type === 'Officer'
-                    ? ['OCT', '2LT', 'LTA']
-                    : this.account_type === 'Primer'
-                    ? [null, 'CLT', 'SCL', ]
-                    : [];
+                        ? ['REC', 'PTE', 'LCP', 'CPL', 'SGT', 'SSG', 'WO']
+                        : this.account_type === 'Officer'
+                            ? [null, 'OCT', '2LT', 'LTA']
+                            : this.account_type === 'Primer'
+                                ? [null, 'CLT', 'SCL']
+                                : [];
 
                     if (this.account_type === 'Admin') return value === null;
                     return allowedRanks.includes(value);
@@ -77,7 +78,7 @@ const UserSchema = new mongoose.Schema(
             type: Boolean,
             default: null,
             validate: {
-                validator: (value) => {
+                validator: function (value) {
                     if (this.account_type === 'Admin') return value === null;
                     return value !== null;
                 },
@@ -108,11 +109,13 @@ const UserSchema = new mongoose.Schema(
             type: String,
             default: null,
             validate: {
-                validator: (value) => {
+                validator: function (value) {
                     if (this.account_type === 'Boy') return value === null || typeof value === 'string';
-                    return value !== null;
+                    return value === null;
                 },
-                message: (props) => `rank1 must be null for non-boy account types, or a string/null for boy account types.`
+                message: function (props) {
+                    return `rank1 must be null for non-boy account types, or a string/null for boy account types. Current value is: ${props.value}`;
+                }
             }
         },
         rank2: {
@@ -121,7 +124,7 @@ const UserSchema = new mongoose.Schema(
             validate: {
                 validator: (value) => {
                     if (this.account_type === 'Boy') return value === null || typeof value === 'string';
-                    return value !== null;
+                    return value === null;
                 },
                 message: (props) => `rank2 must be null for non-boy account types, or a string/null for boy account types.`
             }
@@ -130,9 +133,9 @@ const UserSchema = new mongoose.Schema(
             type: String,
             default: null,
             validate: {
-                validator: (value) => {
+                validator: function (value) {
                     if (this.account_type === 'Boy') return value === null || typeof value === 'string';
-                    return value !== null;
+                    return value === null;
                 },
                 message: (props) => `rank3 must be null for non-boy account types, or a string/null for boy account types.`
             }
@@ -141,9 +144,9 @@ const UserSchema = new mongoose.Schema(
             type: String,
             default: null,
             validate: {
-                validator: (value) => {
+                validator: function (value) {
                     if (this.account_type === 'Boy') return value === null || typeof value === 'string';
-                    return value !== null;
+                    return value === null;
                 },
                 message: (props) => `rank4 must be null for non-boy account types, or a string/null for boy account types.`
             }
@@ -152,9 +155,9 @@ const UserSchema = new mongoose.Schema(
             type: String,
             default: null,
             validate: {
-                validator: (value) => {
+                validator: function (value) {
                     if (this.account_type === 'Boy') return value === null || typeof value === 'string';
-                    return value !== null;
+                    return value === null;
                 },
                 message: (props) => `rank5 must be null for non-boy account types, or a string/null for boy account types.`
             }
