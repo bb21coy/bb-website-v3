@@ -30,6 +30,7 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-route');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -51,7 +52,7 @@ module.exports = async (req, res) => {
                 const { username, password } = req.body || {};
                 if (!username || !password) return res.status(400).json({ message: 'Missing username or password' });
 
-                const users = await User.find({ name: username });
+                const users = await User.find({ user_name: username });
                 if (users.length === 0) return res.status(401).json({ message: 'Invalid username or password' });
 
                 const match = await bcrypt.compare(password, users[0].password);

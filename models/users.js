@@ -35,7 +35,7 @@ const UserSchema = new mongoose.Schema(
         },
         graduated: {
             type: Boolean,
-            default: false
+            default: null,
         },
         appointment: {
             type: String,
@@ -72,7 +72,16 @@ const UserSchema = new mongoose.Schema(
         },
         credentials: {
             type: String,
-            default: null
+            default: null,
+            validate: {
+                validator: function (value) {
+                    if (this.account_type === 'Boy') return value === null;
+                    return value === null || typeof value === 'string';
+                },
+                message: function (props) {
+                    return `credentials must be null for boy account type, or a string/null for non-boy account types. Current value is: ${props.value}`;
+                }
+            }
         },
         roll_call: {
             type: Boolean,

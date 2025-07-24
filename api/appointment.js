@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-route');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -53,7 +54,7 @@ module.exports = async (req, res) => {
         await connectToDatabase();
 
         switch (routeKey) {
-            case 'GET /get_appointments':
+            case 'GET /get_appointments': {
                 await decodeJWT(authorization, res);
                 const appointments = await Appointment.find();
 
@@ -64,7 +65,8 @@ module.exports = async (req, res) => {
                 }
 
                 return res.status(200).json({ appointments, appointment_to_accounts: appointmentToAccounts });
-            
+            }
+
             case 'POST /create_appointment': {
                 const decoded = await decodeJWT(authorization, res);
                 const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);

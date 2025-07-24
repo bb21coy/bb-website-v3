@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-route');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -126,6 +127,36 @@ module.exports = async (req, res) => {
                 return res.status(200).json({ message: 'Account updated successfully' });
             }
 
+            case 'PUT /update_account': {
+                const decoded = await decodeJWT(authorization, res, false);
+                if (!decoded || decoded.error) return;
+
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Admin", "Officer", "Primer"]);
+                if (authError) return;
+
+                if (!req.body.id) return res.status(400).json({ message: 'Missing user ID' });
+
+                const updateUser = await User.findById(req.body.id);
+                if (!updateUser) return res.status(404).json({ message: 'User not found' });
+
+                if (req.body.password && req.body.password !== '') {
+                    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+                    req.body.password = hashedPassword;
+                } else {
+                    delete req.body.password;
+                }
+
+                if (req.body.rank === "NIL") req.body.rank = null;
+                req.body.roll_call = req.body.roll_call?.trim().toLowerCase() === "yes";
+                req.body.graduated = req.body.graduated?.trim().toLowerCase() === "yes";
+
+                await User.findOneAndUpdate({ _id: req.body.id }, req.body);
+                return res.status(200).json({ message: 'Account updated successfully' });
+            }
+
             case 'POST /create_account': {
                 const decoded = await decodeJWT(authorization, res, false);
                 if (!decoded || decoded.error) return;
@@ -154,6 +185,26 @@ module.exports = async (req, res) => {
 
                 await newUser.save();
                 return res.status(201).send();
+            }
+
+            case 'DELETE /delete_account': {
+                const decoded = await decodeJWT(authorization, res, false);
+                if (!decoded || decoded.error) return;
+
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                if (!req.query.id) return res.status(400).json({ message: 'Missing user ID' });
+                const deletingUser = await User.findById(req.query.id);
+                if (!deletingUser) return res.status(404).json({ message: 'User not found' });
+
+                const hierarchy = { "admin": 4, "officer": 3, "primer": 2, "boy": 1 };
+                const requestedUserType = hierarchy[user.account_type.toLowerCase()];
+                const deletingUserType = hierarchy[deletingUser.account_type.toLowerCase()];
+                if ((requestedUserType < deletingUserType) || (user.account_type.toLowerCase() === "boy" && !user.appointment)) return res.status(403).json({ message: 'You do not have permission to delete this account' });
+
+                await User.findByIdAndDelete(req.query.id);
+                return res.status(200).send();
             }
 
             default:
