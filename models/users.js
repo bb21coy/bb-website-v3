@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { validate } = require('./token');
 
 const UserSchema = new mongoose.Schema(
     {

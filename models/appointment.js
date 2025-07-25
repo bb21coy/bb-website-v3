@@ -13,7 +13,7 @@ const AppointmentSchema = new mongoose.Schema(
             required: true
         },
         account_id: {
-            type: Number,
+            type: String,
             required: true
         }
     },

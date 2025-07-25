@@ -57,32 +57,54 @@ module.exports = async (req, res) => {
             case 'GET /get_appointments': {
                 await decodeJWT(authorization, res);
                 const appointments = await Appointment.find();
+                const updatedAppointments = [];
 
-                let appointmentToAccounts = [];
                 for (let appointment of appointments) {
                     const user = await User.findById(appointment.account_id, '_id account_name');
-                    if (user) appointmentToAccounts.push(user);
+                    if (user) {
+                        const updatedAppointment = {
+                            ...appointment.toObject(),
+                            account_name: user.account_name,
+                            account_id: user._id
+                        };
+
+                        updatedAppointments.push(updatedAppointment);
+                    } else {
+                        updatedAppointments.push(appointment);
+                    }
                 }
 
-                return res.status(200).json({ appointments, appointment_to_accounts: appointmentToAccounts });
+                return res.status(200).json(updatedAppointments);
             }
 
             case 'POST /create_appointment': {
                 const decoded = await decodeJWT(authorization, res);
-                const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+                if (!decoded || decoded.error) return;
+
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Officer", "Admin"]);
                 if (authError) return;
 
-                var { appointment_name, account_type, account_id } = req.body || {};
+                const { appointment_name, account_type, account_id } = req.body || {};
                 if (!appointment_name || !account_type || !account_id) return res.status(400).json({ message: 'Missing appointment details' });
                 
                 const newAppointment = new Appointment({ appointment_name, account_type, account_id });
                 await newAppointment.save();
+
+                await User.updateOne({ _id: account_id }, { $set: { appointment: appointment_name } });
                 return res.status(201).json({ message: 'Appointment created successfully' });
             }
 
             case 'PUT /update_appointment': {
                 const decoded = await decodeJWT(authorization, res);
-                const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+                if (!decoded || decoded.error) return;
+
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Officer", "Admin"]);
                 if (authError) return;
 
                 const { account_id, appointment_id } = req.body || {};
@@ -97,14 +119,23 @@ module.exports = async (req, res) => {
 
             case 'DELETE /delete_appointment': {
                 const decoded = await decodeJWT(authorization, res);
-                const authError = checkAuthorization(decoded.account_type, res, ["Officer", "Admin"]);
+                if (!decoded || decoded.error) return;
+
+                const user = await User.findById(decoded.id);
+                if (!user) return res.status(404).json({ message: 'User not found' });
+
+                const authError = checkAuthorization(user.account_type, res, ["Officer", "Admin"]);
                 if (authError) return;
 
-                const { appointment_id } = req.body || {};
+                const appointment_id = req.query?.id;
                 if (!appointment_id) return res.status(400).json({ message: 'Missing appointment ID' });
 
-                const deletedAppointment = await Appointment.findByIdAndDelete(appointment_id);
-                if (!deletedAppointment) return res.status(404).json({ message: 'Appointment not found' });
+                const appointment = await Appointment.findById(appointment_id);
+                if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+                if (["csm", "captain", 'dy csm', 'sec 4/5 ps', 'sec 3 ps', 'sec 2 ps', 'sec 1 ps'].includes(appointment.appointment_name.toLowerCase())) return res.status(403).json({ message: 'Core appointments cannot be deleted' });
+
+                await Appointment.findByIdAndDelete(appointment_id);
                 return res.status(200).json({ message: 'Appointment deleted successfully' });
             }
 
