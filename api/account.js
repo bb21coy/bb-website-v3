@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
-const connectToDatabase = require('../mongoose.js');
+const { connectToDatabase } = require('../mongoose.js');
 const User = require('../models/users.js');
 const Token = require('../models/token.js');
 const bcrypt = require('bcrypt');

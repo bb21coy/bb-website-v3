@@ -23,4 +23,9 @@ async function connectToDatabase() {
     return cached.conn;
 }
 
-module.exports = connectToDatabase;
+async function getAllCollections() {
+    const db = await connectToDatabase();
+    return db.connection.db.listCollections().toArray();
+}
+
+module.exports = { connectToDatabase, getAllCollections };
