@@ -31,6 +31,8 @@ const accountFunction = require('./api/account.js');
 const authFunction = require('./api/auth.js');
 const appointmentFunction = require('./api/appointment.js');
 const adminFunction = require('./api/admin.js');
+const awardFunction = require('./api/awards.js');
+const uniformFunction = require('./api/uniform_inspection.js');
 
 // Dynamically handle routes
 app.all('/api/account', (req, res) => {
@@ -47,6 +49,14 @@ app.all('/api/appointment', (req, res) => {
 
 app.all('/api/admin', (req, res) => {
 	handleDynamicRoute(req, res, adminFunction);
+});
+
+app.all('/api/awards', (req, res) => {
+	handleDynamicRoute(req, res, awardFunction);
+});
+
+app.all('/api/uniform_inspection', (req, res) => {
+	handleDynamicRoute(req, res, uniformFunction);
 });
 
 // Start the server
