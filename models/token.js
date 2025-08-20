@@ -1,3 +1,5 @@
+// This is the model for the token blacklist. Used to prevent token reuse after logout
+
 const mongoose = require('mongoose');
 
 const BlacklistTokenSchema = new mongoose.Schema(

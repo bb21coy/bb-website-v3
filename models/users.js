@@ -1,3 +1,5 @@
+// This is the model for the users includsive of admin, officers, primers, and boys
+
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema(

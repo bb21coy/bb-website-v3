@@ -1,3 +1,5 @@
+// This is the model for the appointments holder list
+
 const mongoose = require('mongoose');
 
 const AppointmentSchema = new mongoose.Schema(
